@@ -19,14 +19,18 @@ public class OpggApiClient {
     private final WebClient webClient;
 
     public List<Match> findAllMatches(String userId) {
-        List<ResponseData> matches = webClient.get()
+        List<ResponseData> matchesData = webClient.get()
                 .uri("/players/steam-{userId}/matches?page=1", userId)
                 .retrieve()
                 .bodyToFlux(ResponseData.class)
                 .collectList()
                 .block();
 
-        return matches.get(0).getData();
+        if (matchesData.get(0) == null) {
+            throw new IllegalArgumentException("No matches found for " + userId);
+        } else {
+            return matchesData.get(0).getData();
+        }
     }
 
     public List<SearchedMatchDetails> findMatchById(String matchId) {
