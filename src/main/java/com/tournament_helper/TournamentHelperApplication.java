@@ -1,6 +1,8 @@
 package com.tournament_helper;
 
+import com.tournament_helper.common.utils.ExcelExporter;
 import com.tournament_helper.domain.Match;
+import com.tournament_helper.domain.SearchedMatchDetails;
 import com.tournament_helper.service.MatchService;
 import com.tournament_helper.service.PlayerService;
 import org.springframework.boot.SpringApplication;
@@ -11,6 +13,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.List;
 
 @SpringBootApplication
@@ -57,7 +60,7 @@ public class TournamentHelperApplication {
         gbc.gridy = 1;
         frame.add(tagField, gbc);
 
-        String[] colunas = {"Match Start", "Match End", "Hunter"};
+        String[] colunas = { "Match ID", "Match Start", "Match End", "Hunter"};
         DefaultTableModel tableModel = new DefaultTableModel(colunas, 0);
         JTable matchTable = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(matchTable);
@@ -103,11 +106,12 @@ public class TournamentHelperApplication {
                 selectButton.setEnabled(false);
             } else {
                 for (Match match : matches) {
+                    String matchId = match.getMatchId() != null ? match.getMatchId() : "N/A";
                     String matchStart = match.getMatchStart() != null ? dateFormat.format(match.getMatchStart()) : "N/A";
                     String matchEnd = match.getMatchEnd() != null ? dateFormat.format(match.getMatchEnd()) : "N/A";
                     String hunter = match.getHeroAssetId() != null ? match.getHeroAssetId().toString() : "N/A";
 
-                    tableModel.addRow(new Object[]{matchStart, matchEnd, hunter});
+                    tableModel.addRow(new Object[]{matchId, matchStart, matchEnd, hunter});
                 }
                 selectButton.setEnabled(true);
             }
@@ -116,8 +120,10 @@ public class TournamentHelperApplication {
         selectButton.addActionListener(e -> {
             int selectedRow = matchTable.getSelectedRow();
             if (selectedRow != -1) {
-                String matchStart = (String) tableModel.getValueAt(selectedRow, 0);
-                JOptionPane.showMessageDialog(frame, "Você selecionou a partida iniciada em: " + matchStart);
+                String matchId = (String) tableModel.getValueAt(selectedRow, 0);
+                List<SearchedMatchDetails> searchedMatch = matchService.findMatchById(matchId);
+                searchedMatch.sort(Comparator.comparing(SearchedMatchDetails::getPlacement));
+                ExcelExporter.exportToExcel(searchedMatch, "matches.xlsx");
             }
         });
 

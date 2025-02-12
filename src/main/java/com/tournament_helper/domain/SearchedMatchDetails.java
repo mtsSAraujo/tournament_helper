@@ -17,5 +17,5 @@ public class SearchedMatchDetails {
     @JsonProperty("placement")
     private int placement;
     private Stats stats;
-    private Player player;
+    private MatchPlayer player;
 }
