@@ -10,7 +10,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ExcelScoreCalculator {
@@ -40,39 +42,16 @@ public class ExcelScoreCalculator {
              Workbook workbook = new XSSFWorkbook(fis)) {
 
             Map<String, Integer> teamScores = new HashMap<>();
+            Map<String, Pair<Double, Integer>> playerKDAStats = new HashMap<>();
 
             for (Sheet sheet : workbook) {
                 if (sheet.getSheetName().startsWith("Match ")) {
-                    processMatchSheet(sheet, teamScores);
+                    processMatchSheet(sheet, teamScores, playerKDAStats);
                 }
             }
 
-            Sheet totalSheet = workbook.getSheet("Total");
-            if (totalSheet == null) {
-                totalSheet = workbook.createSheet("Total");
-            } else {
-                // Limpa os dados antigos
-                int lastRow = totalSheet.getLastRowNum();
-                for (int i = lastRow; i >= 0; i--) {
-                    totalSheet.removeRow(totalSheet.getRow(i));
-                }
-            }
-
-            Row headerRow = totalSheet.createRow(0);
-            headerRow.createCell(0).setCellValue("TAG");
-            headerRow.createCell(1).setCellValue("PONTOS");
-            headerRow.createCell(3).setCellValue("PLAYER");
-            headerRow.createCell(4).setCellValue("KDA");
-
-            int rowNum = 1;
-            for (Map.Entry<String, Integer> entry : teamScores.entrySet()) {
-                Row row = totalSheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(entry.getKey()); // TAG do time
-                row.createCell(1).setCellValue(entry.getValue()); // Pontuação total
-            }
-
-            totalSheet.autoSizeColumn(0);
-            totalSheet.autoSizeColumn(1);
+            updateTotalSheetData(workbook, teamScores);
+            updatePlayersKDASheetData(workbook, playerKDAStats);
 
             try (FileOutputStream fos = new FileOutputStream(filePath)) {
                 workbook.write(fos);
@@ -85,10 +64,10 @@ public class ExcelScoreCalculator {
         }
     }
 
-    private static void processMatchSheet(Sheet sheet, Map<String, Integer> teamScores) {
+    private static void processMatchSheet(Sheet sheet, Map<String, Integer> teamScores, Map<String, Pair<Double, Integer>> playerKDAStats) {
         Map<String, Integer> teamKills = new HashMap<>();
         Map<String, Integer> teamPosition = new HashMap<>();
-        Map<String, Pair<Integer, Double>> playerKDA = new HashMap<>();
+        Map<String, Double> playerKDA = new HashMap<>();
 
         int numRows = sheet.getPhysicalNumberOfRows();
 
@@ -103,7 +82,7 @@ public class ExcelScoreCalculator {
             double kda = row.getCell(8).getNumericCellValue();
 
             teamKills.put(teamTag, teamKills.getOrDefault(teamTag, 0) + kills);
-            playerKDA.put(playerName, new Pair<>(position, kda));
+            playerKDA.put(playerName, kda);
 
             teamPosition.putIfAbsent(teamTag, position);
         }
@@ -118,5 +97,71 @@ public class ExcelScoreCalculator {
             // Somar pontuação do time ao total acumulado
             teamScores.put(team, teamScores.getOrDefault(team, 0) + totalPoints);
         }
+
+        for (Map.Entry<String, Double> entry : playerKDA.entrySet()) {
+            String playerName = entry.getKey();
+            double newKDA = entry.getValue();
+
+            Pair<Double, Integer> existingData = playerKDAStats.getOrDefault(playerName, new Pair<>(0.0, 0));
+            double totalKDA = existingData.getFirst() * existingData.getSecond() + newKDA;
+            int newMatchCount = existingData.getSecond() + 1;
+            double updatedAvgKDA = totalKDA / newMatchCount;
+
+            playerKDAStats.put(playerName, new Pair<>(updatedAvgKDA, newMatchCount));
+        }
+    }
+
+    private static void updateTotalSheetData(Workbook workbook, Map<String, Integer> teamScores, Map<String, Pair<Double, Integer>> playerKDAStats) {
+        Sheet totalSheet = workbook.getSheet("Total");
+        if (totalSheet == null) {
+            totalSheet = workbook.createSheet("Total");
+        } else {
+            int lastRow = totalSheet.getLastRowNum();
+            for (int i = lastRow; i >= 0; i--) {
+                totalSheet.removeRow(totalSheet.getRow(i));
+            }
+        }
+
+        Row headerRow = totalSheet.createRow(0);
+        headerRow.createCell(0).setCellValue("TAG");
+        headerRow.createCell(1).setCellValue("PONTOS");
+        headerRow.createCell(3).setCellValue("PLAYER");
+        headerRow.createCell(4).setCellValue("KDA MÉDIO");
+        headerRow.createCell(5).setCellValue("PARTIDAS");
+
+        int rowNum = 1;
+
+        // **Ordenar times por pontuação decrescente**
+        List<Map.Entry<String, Integer>> sortedTeams = new ArrayList<>(teamScores.entrySet());
+        sortedTeams.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+
+        for (Map.Entry<String, Integer> entry : sortedTeams) {
+            Row row = totalSheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(entry.getKey());
+            row.createCell(1).setCellValue(entry.getValue());
+        }
+
+        rowNum = 1;
+
+        // **Ordenar jogadores por KDA médio decrescente**
+        List<Map.Entry<String, Pair<Double, Integer>>> sortedPlayers = new ArrayList<>(playerKDAStats.entrySet());
+        sortedPlayers.sort((a, b) -> Double.compare(b.getValue().getFirst(), a.getValue().getFirst()));
+
+        for (Map.Entry<String, Pair<Double, Integer>> entry : sortedPlayers) {
+            Row row = totalSheet.getRow(rowNum);
+            if (row == null) {
+                row = totalSheet.createRow(rowNum);
+            }
+            row.createCell(3).setCellValue(entry.getKey());
+            row.createCell(4).setCellValue(entry.getValue().getFirst());
+            row.createCell(5).setCellValue(entry.getValue().getSecond());
+            rowNum++;
+        }
+
+        totalSheet.autoSizeColumn(0);
+        totalSheet.autoSizeColumn(1);
+        totalSheet.autoSizeColumn(3);
+        totalSheet.autoSizeColumn(4);
+        totalSheet.autoSizeColumn(5);
     }
 }

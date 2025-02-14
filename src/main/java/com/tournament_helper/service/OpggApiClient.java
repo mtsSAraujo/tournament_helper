@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,8 +53,6 @@ public class OpggApiClient {
 
 
     private Player filterPlayerByPlayerName(List<Player> players, String playerName) {
-        players.forEach(p -> System.out.println(p.getUniqueDisplayName()));
-        System.out.println("player name = " + playerName);
         return players.stream()
                 .filter(p -> Objects.equals(p.getUniqueDisplayName(), playerName.replace("%23", "#")))
                 .findFirst()
@@ -64,7 +61,6 @@ public class OpggApiClient {
 
     public String playerIdFound(String playerName) {
         List<Player> players = findPlayersByPlayerName(playerName);
-        players.forEach(p -> System.out.println("Player: " + p.getUniqueDisplayName()));
         Player player = filterPlayerByPlayerName(players, playerName);
         if(player != null) {
             return player.getUserId();
