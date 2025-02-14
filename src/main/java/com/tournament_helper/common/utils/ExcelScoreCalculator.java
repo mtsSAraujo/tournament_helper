@@ -94,7 +94,6 @@ public class ExcelScoreCalculator {
 
             int totalPoints = positionPoints + killPoints;
 
-            // Somar pontuação do time ao total acumulado
             teamScores.put(team, teamScores.getOrDefault(team, 0) + totalPoints);
         }
 
@@ -111,7 +110,7 @@ public class ExcelScoreCalculator {
         }
     }
 
-    private static void updateTotalSheetData(Workbook workbook, Map<String, Integer> teamScores, Map<String, Pair<Double, Integer>> playerKDAStats) {
+    private static void updateTotalSheetData(Workbook workbook, Map<String, Integer> teamScores) {
         Sheet totalSheet = workbook.getSheet("Total");
         if (totalSheet == null) {
             totalSheet = workbook.createSheet("Total");
@@ -125,13 +124,8 @@ public class ExcelScoreCalculator {
         Row headerRow = totalSheet.createRow(0);
         headerRow.createCell(0).setCellValue("TAG");
         headerRow.createCell(1).setCellValue("PONTOS");
-        headerRow.createCell(3).setCellValue("PLAYER");
-        headerRow.createCell(4).setCellValue("KDA MÉDIO");
-        headerRow.createCell(5).setCellValue("PARTIDAS");
 
         int rowNum = 1;
-
-        // **Ordenar times por pontuação decrescente**
         List<Map.Entry<String, Integer>> sortedTeams = new ArrayList<>(teamScores.entrySet());
         sortedTeams.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
 
@@ -140,28 +134,38 @@ public class ExcelScoreCalculator {
             row.createCell(0).setCellValue(entry.getKey());
             row.createCell(1).setCellValue(entry.getValue());
         }
+        totalSheet.autoSizeColumn(0);
+        totalSheet.autoSizeColumn(1);
+    }
 
-        rowNum = 1;
+    private static void updatePlayersKDASheetData(Workbook workbook, Map<String, Pair<Double, Integer>> playerKDAStats) {
+        Sheet playersSheet = workbook.getSheet("Players KDA");
+        if (playersSheet == null) {
+            playersSheet = workbook.createSheet("Players KDA");
+        } else {
+            int lastRow = playersSheet.getLastRowNum();
+            for (int i = lastRow; i >= 0; i--) {
+                playersSheet.removeRow(playersSheet.getRow(i));
+            }
+        }
 
-        // **Ordenar jogadores por KDA médio decrescente**
+        Row headerRow = playersSheet.createRow(0);
+        headerRow.createCell(0).setCellValue("PLAYER");
+        headerRow.createCell(1).setCellValue("KDA MÉDIO");
+        headerRow.createCell(2).setCellValue("PARTIDAS");
+
+        int rowNum = 1;
         List<Map.Entry<String, Pair<Double, Integer>>> sortedPlayers = new ArrayList<>(playerKDAStats.entrySet());
         sortedPlayers.sort((a, b) -> Double.compare(b.getValue().getFirst(), a.getValue().getFirst()));
 
         for (Map.Entry<String, Pair<Double, Integer>> entry : sortedPlayers) {
-            Row row = totalSheet.getRow(rowNum);
-            if (row == null) {
-                row = totalSheet.createRow(rowNum);
-            }
-            row.createCell(3).setCellValue(entry.getKey());
-            row.createCell(4).setCellValue(entry.getValue().getFirst());
-            row.createCell(5).setCellValue(entry.getValue().getSecond());
-            rowNum++;
+            Row row = playersSheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(entry.getKey());
+            row.createCell(1).setCellValue(entry.getValue().getFirst());
+            row.createCell(2).setCellValue(entry.getValue().getSecond());
         }
-
-        totalSheet.autoSizeColumn(0);
-        totalSheet.autoSizeColumn(1);
-        totalSheet.autoSizeColumn(3);
-        totalSheet.autoSizeColumn(4);
-        totalSheet.autoSizeColumn(5);
+        playersSheet.autoSizeColumn(0);
+        playersSheet.autoSizeColumn(1);
+        playersSheet.autoSizeColumn(2);
     }
 }
