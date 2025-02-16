@@ -7,16 +7,16 @@ import lombok.Getter;
 @Getter
 public enum Teams {
     // Ordem da sala custom.
-    TUB(1),
+    SRG(1),
     OON(2),
-    NDA(3),
-    CBT(4),
-    ROK(5),
-    PTC(6),
-    LMI(7),
-    SOL(8),
-    AEP(9),
-    TFL(10);
+    TOV(3),
+    VVQ(4),
+    BSA(5),
+    TUB(6),
+    PTC(7),
+    RRR(8),
+    ROK(9),
+    TGZ(10);
 
     private int teamId;
 
