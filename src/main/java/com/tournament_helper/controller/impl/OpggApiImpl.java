@@ -5,9 +5,11 @@ import com.tournament_helper.domain.Match;
 import com.tournament_helper.domain.SearchedMatchDetails;
 import com.tournament_helper.service.OpggApiClient;
 import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Service
 @AllArgsConstructor
 public class OpggApiImpl implements OpggApi {
 
