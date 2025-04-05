@@ -25,16 +25,19 @@ public class OpggApiClient {
                 .bodyToFlux(ResponseData.class)
                 .collectList()
                 .block();
-
-        if (matchesData.get(0) == null) {
+        try {
+            if (matchesData == null) {
+                throw new IllegalArgumentException("No matches found for " + userId);
+            } else {
+                return matchesData.get(0).getData();
+            }
+        } catch (NullPointerException e) {
             throw new IllegalArgumentException("No matches found for " + userId);
-        } else {
-            return matchesData.get(0).getData();
         }
     }
 
     public List<SearchedMatchDetails> findMatchById(String matchId) {
-        return webClient.get()
+        return  webClient.get()
                 .uri("/matches/steam-{matchId}", matchId)
                 .retrieve()
                 .bodyToFlux(SearchedMatchDetails.class)

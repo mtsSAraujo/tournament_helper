@@ -13,6 +13,7 @@ import java.util.Map;
 public enum GameType {
     CUSTOM("customgame"),
     ARENA("deathmatch"),
+    SQUAD("default"),
     DUOS("duos");
 
     private static final Map<String, GameType> MAP = new HashMap<>();

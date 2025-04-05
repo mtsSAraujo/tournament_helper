@@ -2,6 +2,7 @@ package com.tournament_helper.service;
 
 import com.tournament_helper.controller.OpggApi;
 import com.tournament_helper.domain.Match;
+import com.tournament_helper.domain.SearchedMatchDetails;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +13,10 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.List;
+
+import static com.tournament_helper.service.excel.ExcelExporter.exportToExcel;
 
 @Component
 @RequiredArgsConstructor
@@ -132,16 +136,15 @@ public class TournamentUI {
         if (selectedRow != -1 && matches != null && selectedRow < matches.size()) {
             Match selectedMatch = matches.get(matchTable.convertRowIndexToModel(selectedRow));
             String matchId = selectedMatch.getMatchId();
-            fetchMatchSelect(matchId);
+            exportToExcel(fetchMatchSelect(matchId), "matches.xlsx");
             JOptionPane.showMessageDialog(frame,
                     "Você selecionou a partida iniciada em: " +
                             new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(selectedMatch.getMatchStart()));
         }
     }
 
-    private void fetchMatchSelect(String matchId) {
-        var matcheDetails = opggApi.findMatchById(matchId);
-        System.out.println(matcheDetails);
+    private List<SearchedMatchDetails> fetchMatchSelect(String matchId) {
+        return opggApi.findMatchById(matchId).stream().sorted(Comparator.comparing(SearchedMatchDetails::getPlacement)).toList();
     }
 }
 
