@@ -10,7 +10,7 @@ public class WebClientConfig {
     @Bean
     public WebClient webClient(WebClient.Builder webClientBuilder) {
         return webClientBuilder
-                .baseUrl("https://supervive.op.gg/api")
+                .baseUrl("https://op.gg/supervive/api/")
                 .build();
     }
 }

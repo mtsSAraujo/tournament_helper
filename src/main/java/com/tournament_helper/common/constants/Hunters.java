@@ -12,6 +12,7 @@ import java.util.Map;
 @Getter
 public enum Hunters {
     BRALL("hero:ronin"),
+    CARBINE("hero:bountyhunter"),
     GHOST("hero:assault"),
     JIN("hero:stalker"),
     JOULE("hero:storm"),
@@ -30,7 +31,8 @@ public enum Hunters {
     CELESTE("hero:freeze"),
     HUDSON("hero:gunner"),
     VOID("hero:void"),
-    CRYSTA("hero:burstcaster");
+    CRYSTA("hero:burstcaster"),
+    WUKONG("hero:wukong");
 
     private static final Map<String, Hunters> MAP = new HashMap<>();
 
