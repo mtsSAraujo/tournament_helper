@@ -10,7 +10,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ExcelScoreCalculator {
@@ -43,40 +45,84 @@ public class ExcelScoreCalculator {
              Workbook workbook = new XSSFWorkbook(fis)) {
 
             Map<String, Integer> teamScores = new HashMap<>();
+            Map<String, Double> playerKdaTotal = new HashMap<>();
+            Map<String, Integer> playerKdaCount = new HashMap<>();
 
             for (Sheet sheet : workbook) {
                 if (sheet.getSheetName().startsWith("Match ")) {
                     processMatchSheet(sheet, teamScores);
+
+                    int numRows = sheet.getPhysicalNumberOfRows();
+                    for (int i = 1; i < numRows; i++) {
+                        Row row = sheet.getRow(i);
+                        if (row == null) continue;
+
+                        String playerName = row.getCell(4).getStringCellValue(); // PLAYER
+                        double kda = row.getCell(8).getNumericCellValue(); // KDA
+
+                        playerKdaTotal.put(playerName, playerKdaTotal.getOrDefault(playerName, 0.0) + kda);
+                        playerKdaCount.put(playerName, playerKdaCount.getOrDefault(playerName, 0) + 1);
+                    }
                 }
             }
 
+            // Criar ou limpar a aba 'Total'
             Sheet totalSheet = workbook.getSheet("Total");
             if (totalSheet == null) {
                 totalSheet = workbook.createSheet("Total");
             } else {
-                // Limpa os dados antigos
                 int lastRow = totalSheet.getLastRowNum();
                 for (int i = lastRow; i >= 0; i--) {
-                    totalSheet.removeRow(totalSheet.getRow(i));
+                    Row row = totalSheet.getRow(i);
+                    if (row != null) totalSheet.removeRow(row);
                 }
             }
 
+            // Cabeçalho
             Row headerRow = totalSheet.createRow(0);
             headerRow.createCell(0).setCellValue("TAG");
             headerRow.createCell(1).setCellValue("PONTOS");
             headerRow.createCell(3).setCellValue("PLAYER");
             headerRow.createCell(4).setCellValue("KDA");
 
+            List<Map.Entry<String, Integer>> sortedTeamScores = new ArrayList<>(teamScores.entrySet());
+            sortedTeamScores.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+
+            // Escrever times
             int rowNum = 1;
-            for (Map.Entry<String, Integer> entry : teamScores.entrySet()) {
+            for (Map.Entry<String, Integer> entry : sortedTeamScores) {
                 Row row = totalSheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(entry.getKey()); // TAG do time
-                row.createCell(1).setCellValue(entry.getValue()); // Pontuação total
+                row.createCell(0).setCellValue(entry.getKey()); // TAG
+                row.createCell(1).setCellValue(entry.getValue()); // PONTOS
             }
 
+            // Calcular KDA médio e ordenar
+            Map<String, Double> averageKdaMap = new HashMap<>();
+            for (String player : playerKdaTotal.keySet()) {
+                double totalKda = playerKdaTotal.get(player);
+                int count = playerKdaCount.get(player);
+                double average = totalKda / count;
+                averageKdaMap.put(player, average);
+            }
+
+            List<Map.Entry<String, Double>> sortedKdaList = new ArrayList<>(averageKdaMap.entrySet());
+            sortedKdaList.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+
+            rowNum ++;
+
+            for (Map.Entry<String, Double> entry : sortedKdaList) {
+                Row row = totalSheet.createRow(rowNum++);
+                row.createCell(3).setCellValue(entry.getKey());
+                row.createCell(4).setCellValue(entry.getValue());
+            }
+
+            // Ajustar colunas
             totalSheet.autoSizeColumn(0);
             totalSheet.autoSizeColumn(1);
+            totalSheet.autoSizeColumn(3);
+            totalSheet.autoSizeColumn(4);
 
+            // Salvar
             try (FileOutputStream fos = new FileOutputStream(filePath)) {
                 workbook.write(fos);
             }
@@ -88,10 +134,10 @@ public class ExcelScoreCalculator {
         }
     }
 
+
     private static void processMatchSheet(Sheet sheet, Map<String, Integer> teamScores) {
         Map<String, Integer> teamKills = new HashMap<>();
         Map<String, Integer> teamPosition = new HashMap<>();
-        Map<String, Pair<Integer, Double>> playerKDA = new HashMap<>();
 
         int numRows = sheet.getPhysicalNumberOfRows();
 
@@ -101,13 +147,9 @@ public class ExcelScoreCalculator {
 
             int position = (int) row.getCell(0).getNumericCellValue();
             String teamTag = row.getCell(1).getStringCellValue();
-            String playerName = row.getCell(4).getStringCellValue();
             int kills = (int) row.getCell(5).getNumericCellValue();
-            double kda = row.getCell(8).getNumericCellValue();
 
             teamKills.put(teamTag, teamKills.getOrDefault(teamTag, 0) + kills);
-            playerKDA.put(playerName, new Pair<>(position, kda));
-
             teamPosition.putIfAbsent(teamTag, position);
         }
 
